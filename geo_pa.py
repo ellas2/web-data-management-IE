@@ -3,21 +3,31 @@ import sys
 
 ONTOLOGY_PREFIX = 'http://example.org/'
 
-# Regex for the queries
-WHO_PATTERN = "^who is the (?P<relation>[\w -.]+)of (?P<entity>[\w -.]+)\?*$"
-WHO_PATTERN2 = "^who is (?P<entity>[\w -.]+)\?*$"
-WHAT_PATTERN = "^what is the (?P<relation>[\w -.]+)of (?P<entity>[\w -.]+)\?*$"
-WHEN_PATTERN = "^when was the (?P<relation>[\w -.]+)of (?P<entity>[\w -.]+) born\?*$"
+# Regexps for the queries
+WHO_P = "^who is (?P<entity>[\w -.]+)\?*$"
+WHO_PRS_P = "^who is the president of (?P<entity>[\w -.]+)\?*$"
+WHO_PM_P = "^who is the prime minister of (?P<entity>[\w -.]+)\?*$"
+WHAT_POP_P = "^what is the population of (?P<entity>[\w -.]+)\?*$"
+WHAT_CAP_P = "^what is the capital of (?P<entity>[\w -.]+)\?*$"
+WHAT_AR_P = "^what is the area of (?P<entity>[\w -.]+)\?*$"
+WHAT_GOV_P = "^what is the government of (?P<entity>[\w -.]+)\?*$"
+WHEN_PRS_P = "^when was the president of (?P<entity>[\w -.]+) born\?*$"
+WHEN_PM_P = "^when was the prime minister of (?P<entity>[\w -.]+) born\?*$"
 
 ENTITY_GROUP = "entity"
-RELATION_GROUP = "relation"
+#RELATION_GROUP = "relation"
 NO_RELATION = "no_relation"
 
 # Pattern values for the queries
 WHO = 1
-WHO_2 = 2
-WHAT = 3
-WHEN = 4
+WHO_PRES = 2
+WHO_PM = 3
+WHAT_POP = 4
+WHAT_CAP = 5
+WHAT_AREA = 6
+WHAT_GOV = 7
+WHEN_PRES = 8
+WHEN_PM = 9
 INVALID = -1
 
 
@@ -34,31 +44,54 @@ def create_sparql_query(entity, relation):
 
 
 
-
-
 class Query():
     entity = ""
     relation = ""
     pattern = None
 
-    def __init__(self, query, who_regex, who_regex2, what_regex, when_regex):
-        if who_regex.match(query):
+    def __init__(self, query, who_reg, who_president_reg, who_prime_min_reg,\
+                 what_pop_reg, what_cap_reg, what_area_reg, what_gov_reg,\
+                 when_president_reg, when_prime_min_reg):
+        if who_president_reg.match(query):
+            self.pattern = WHO_PRES
+            match = who_president_reg.match(query)
+            self.relation = "president"
+        elif who_prime_min_reg.match(query):
+            self.pattern = WHO_PM
+            match = who_prime_min_reg.match(query)
+            self.relation = "prime minister"
+        elif who_reg.match(query):
             self.pattern = WHO
-            match = who_regex.match(query)
-        elif who_regex2.match(query):
-            self.pattern = WHO_2
-            match = who_regex2.match(query)
-        elif what_regex.match(query):
-            self.pattern = WHAT
-            match = what_regex.match(query)
-        elif when_regex.match(query):
-            self.pattern = WHEN
-            match = when_regex.match(query)
+            match = who_reg.match(query)
+        elif what_pop_reg.match(query):
+            self.pattern = WHAT_POP
+            match = what_pop_reg.match(query)
+            self.relation = "population"
+        elif what_cap_reg.match(query):
+            self.pattern = WHAT_CAP
+            match = what_cap_reg.match(query)
+            self.relation = "capital"
+        elif what_area_reg.match(query):
+            self.pattern = WHAT_AREA
+            match = what_area_reg.match(query)
+            self.relation = "area"
+        elif what_gov_reg.match(query):
+            self.pattern = WHAT_GOV
+            match = what_gov_reg.match(query)
+            self.relation = "government"
+        elif when_president_reg.match(query):
+            self.pattern = WHEN_PRES
+            match = when_president_reg.match(query)
+            self.relation = "president"
+        elif when_prime_min_reg.match(query):
+            self.pattern = WHEN_PM
+            match = when_prime_min_reg.match(query)
+            self.relation = "prime minister"
         else:
             self.pattern = INVALID
 
         # Get the relation and entity from the query
-        if self.pattern is WHO_2:
+        if self.pattern is WHO:
             print("pattern is: " + str(self.pattern))
             self.entity = match.group(ENTITY_GROUP)
             print(self.entity)
@@ -67,6 +100,7 @@ class Query():
             print("pattern is: " + str(self.pattern))
             self.entity = match.group(ENTITY_GROUP)
             print("entity: " + self.entity)
+            '''
             self.relation = match.group(RELATION_GROUP)
             rel = self.relation
             rel = normalize_query(rel)
@@ -78,6 +112,7 @@ class Query():
             elif self.pattern is WHAT:
                 if rel != "area" and rel != "government" and rel != "capital":
                     self.pattern = INVALID
+            '''
 
 
 
@@ -103,10 +138,15 @@ def normalize_query(query):
 
 def __main__(query_str):
     query_str = normalize_query(query_str)
-    reg_expressions = compile_reg_expressions([WHO_PATTERN, WHO_PATTERN2, WHAT_PATTERN, WHEN_PATTERN])
-    [who_regex, who_regex2, what_regex, when_regex] = reg_expressions
+    reg_expressions = compile_reg_expressions([WHO_P, WHO_PRS_P, WHO_PM_P, \
+                                               WHAT_POP_P, WHAT_CAP_P, WHAT_AR_P, WHAT_GOV_P, \
+                                               WHEN_PRS_P, WHEN_PM_P])
 
-    query = Query(query_str, who_regex, who_regex2, what_regex, when_regex)
+    [who_reg, who_president_reg, who_prime_min_reg, what_pop_reg, what_cap_reg,\
+     what_area_reg, what_gov_reg, when_president_reg, when_prime_min_reg] = reg_expressions
+
+    query = Query(query_str, who_reg, who_president_reg, who_prime_min_reg, what_pop_reg, what_cap_reg,\
+     what_area_reg, what_gov_reg, when_president_reg, when_prime_min_reg)
     if query.pattern is INVALID:
         print("Unable to handle query: " + query_str)
         print("Can only handle queries of the form:")
