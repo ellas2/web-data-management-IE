@@ -13,14 +13,14 @@ def run_query(graph, query, query_num):
 
 q_a = "select DISTINCT ?a where { ?a <http://example.org/prime_minister> ?country }"
 
-q_b = "select ?country where {  }"
-
+q_b = "select ?country where { ?country <http://example.org/area> ?b }"
+#TODO: this should maybe be changed
 
 q_c = "select ?country where { ?country <http://example.org/government> ?b." \
-      "filter (contains(str(?b), republic)) }"
+      "FILTER (contains(str(?b), republic)) }"
 
 q_d = "select ?country where { ?country <http://example.org/government> ?b." \
-      "filter (contains(str(?b), monarchy)) }"
+      "FILTER (contains(str(?b), monarchy)) }"
 
 graph = rdflib.Graph()
 run_query(graph, q_a, '1')
