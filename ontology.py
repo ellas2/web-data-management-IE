@@ -5,7 +5,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 import threading, re
 
 lock = '' # Define lock for sync
-wiki_prefix = "http://en.wikipedia.org";
+wiki_prefix = "http://en.wikipedia.org"
 g = '' # main ontology graph
 president = rdflib.URIRef(wiki_prefix + '/president')
 prime_minister = rdflib.URIRef(wiki_prefix + '/prime_minister')
@@ -60,9 +60,9 @@ def extract_country_info(objects):
         add_country_info_to_ontology(graph, curr_country, government, country_page,
                                      "//table[contains(@class, 'infobox')]//tr[contains(th//text(),'Government')]/td//text()")
         president_entity = add_country_info_to_ontology(graph, curr_country, president, country_page,
-                                     "//table[contains(@class, 'infobox')]//tr[th//a/text() ='President']/td//text()")
+                                     "//table[contains(@class, 'infobox')]//tr[th//a/text() ='President']/td//a/@title")
         prime_minister_entity = add_country_info_to_ontology(graph, curr_country, prime_minister, country_page,
-                                     "//table[contains(@class, 'infobox')]//tr[th//a/text() ='Prime Minister']/td//text()")
+                                     "//table[contains(@class, 'infobox')]//tr[th//a/text() ='Prime Minister']/td//a/@title")
 
         country_president_url_q = country_page.xpath("//table[contains(@class, 'infobox')]//tr[th//a/text() ='President']/td//a/@href")
         if len(country_president_url_q) > 0 and president_entity:
