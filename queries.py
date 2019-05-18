@@ -12,7 +12,7 @@ def run_query(graph, query, query_num):
     print('num rows is ' + count)
 
 # All prime ministers
-q_a = "select DISTINCT (?a) where { ?a <http://example.org/prime_minister> ?country }"
+q_a = "select DISTINCT (?a) where { ?country <http://example.org/prime_minister> ?a }"
 
 # All countries
 q_b = "select ?country where { ?country <http://example.org/area> ?b }"

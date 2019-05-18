@@ -2,7 +2,7 @@ import re
 import sys
 import rdflib
 
-ONTOLOGY_PREFIX = 'http://example.org/'
+ONTOLOGY_PREFIX = 'http://en.wikipedia.org/'
 
 # Regexps for the queries
 WHO_P = "^who is (?P<entity>[\w -.]+)\?*$"
@@ -54,9 +54,9 @@ def create_sparql_query(query):
         sparql_query = ' '
         #TODO: TBD
     elif query.pattern is WHO_PRES:
-        sparql_query = 'select DISTINCT ?a where { ?a <http://example.org/president> <' + ONTOLOGY_PREFIX + entity + '> }'
+        sparql_query = 'select DISTINCT ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/president> ?a }'
     elif query.pattern is WHO_PM:
-        sparql_query = 'select DISTINCT ?a where { ?a <http://example.org/prime_minister> <' + ONTOLOGY_PREFIX + entity + '> }'
+        sparql_query = 'select DISTINCT ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/prime_minister> ?a  }'
     elif query.pattern is WHAT_POP:
         sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/population> ?a }'
     elif query.pattern is WHAT_CAP:
@@ -67,10 +67,10 @@ def create_sparql_query(query):
         sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/government> ?a }'
     elif query.pattern is WHEN_PRES:
         sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/president> ?a.' \
-                        ' ?a <http://example.org/birth_date> ?b}'
+                        ' ?a <http://example.org/birthDate> ?b}'
     elif query.pattern is WHEN_PM:
         sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/prime_minister> ?a.' \
-                        ' ?a <http://example.org/birth_date> ?b}'
+                        ' ?a <http://example.org/birthDate> ?b}'
 
     return sparql_query
 
