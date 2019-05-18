@@ -11,14 +11,18 @@ def run_query(graph, query, query_num):
         count+=1
     print('num rows is ' + count)
 
-q_a = "select DISTINCT ?a where { ?a <http://example.org/prime_minister> ?country }"
+# All prime ministers
+q_a = "select DISTINCT (?a) where { ?a <http://example.org/prime_minister> ?country }"
 
+# All countries
 q_b = "select ?country where { ?country <http://example.org/area> ?b }"
 #TODO: this should maybe be changed
 
+# All countries that are republics
 q_c = "select ?country where { ?country <http://example.org/government> ?b." \
       "FILTER (contains(str(?b), republic)) }"
 
+# All countries that are monarchies
 q_d = "select ?country where { ?country <http://example.org/government> ?b." \
       "FILTER (contains(str(?b), monarchy)) }"
 

@@ -1,5 +1,6 @@
 import re
 import sys
+import rdflib
 
 ONTOLOGY_PREFIX = 'http://example.org/'
 
@@ -31,7 +32,15 @@ WHEN_PM = 9
 INVALID = -1
 
 
-def create_sparql_query(entity, relation):
+def run_sparql_query(graph, sparql_query):
+    graph.parse("ontology.nt", format="nt")
+    x1 = graph.query(query)
+    print ('results:')
+
+
+def create_sparql_query(query):
+    entity = query.entity.lower()
+    relation = query.relation
     entity = entity.lower()
     entity_lst = entity.split()
     entity_for_query = "_"
@@ -41,6 +50,29 @@ def create_sparql_query(entity, relation):
     relation_for_query = "_"
     relation_for_query = relation_for_query.join(relation_lst)
     print("relation_for_query: " + relation_for_query)
+    if query.pattern is WHO:
+        sparql_query = ' '
+        #TODO: TBD
+    elif query.pattern is WHO_PRES:
+        sparql_query = 'select DISTINCT ?a where { ?a <http://example.org/president> <' + ONTOLOGY_PREFIX + entity + '> }'
+    elif query.pattern is WHO_PM:
+        sparql_query = 'select DISTINCT ?a where { ?a <http://example.org/prime_minister> <' + ONTOLOGY_PREFIX + entity + '> }'
+    elif query.pattern is WHAT_POP:
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/population> ?a }'
+    elif query.pattern is WHAT_CAP:
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/capital> ?a }'
+    elif query.pattern is WHAT_AREA:
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/area> ?a }'
+    elif query.pattern is WHAT_GOV:
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/government> ?a }'
+    elif query.pattern is WHEN_PRES:
+        sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/president> ?a.' \
+                        ' ?a <http://example.org/birth_date> ?b}'
+    elif query.pattern is WHEN_PM:
+        sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/prime_minister> ?a.' \
+                        ' ?a <http://example.org/birth_date> ?b}'
+
+    return sparql_query
 
 
 
@@ -115,8 +147,6 @@ class Query():
             '''
 
 
-
-
 def compile_reg_expressions(patterns):
     expressions = []
     if int(sys.version[2]) < 6:
@@ -156,12 +186,10 @@ def __main__(query_str):
         print("When was the president/prime minister of <country> born?")
         print("Who is <entity>?")
         return None
-
-    entity = query.entity
-    relation = query.relation
-    create_sparql_query(entity,relation)
+    #graph = rdflib.Graph()
+    sparql_query = create_sparql_query(query)
+    #run_sparql_query(graph, sparql_query)
 
 
 query_str = " ".join(sys.argv[1:])
-
 __main__(query_str)
