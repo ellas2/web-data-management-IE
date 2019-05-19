@@ -14,6 +14,7 @@ area = rdflib.URIRef(wiki_prefix + '/area')
 government = rdflib.URIRef(wiki_prefix + '/government')
 capital = rdflib.URIRef(wiki_prefix + '/capital')
 birth_date = rdflib.URIRef(wiki_prefix + '/birthDate')
+country_entity = rdflib.URIRef(wiki_prefix + '/country')
 
 
 def add_birth_date_information(graph, person, relation, url, xpath_query):
@@ -51,6 +52,8 @@ def extract_country_info(objects):
         new_res = requests.get(new_url)
         country_page = lxml.html.fromstring(new_res.content)
         curr_country = rdflib.URIRef(wiki_prefix + "/" + country_name)
+        with lock:
+            graph.add((curr_country, country_entity, curr_country))
         add_country_info_to_ontology(graph, curr_country, capital, country_page,
                                      "//table[contains(@class, 'infobox')]//tr[contains(th//text(),'Capital')]/td/a/text()")
         add_country_info_to_ontology(graph, curr_country, area, country_page,
