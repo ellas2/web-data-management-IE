@@ -5,25 +5,22 @@ def run_query(graph, query, query_num):
     graph.parse("ontology.nt", format="nt")
     x1 = graph.query(query)
     print ('query ' + query_num + ' results:')
-    count = 0
     for row in x1:
         print (row)
-        count+=1
-    print('num rows is ' + str(count))
 
 # All prime ministers
-q_a = "select ?a where { ?country <http://en.wikipedia.org/prime_minister> ?a }"
+q_a = "select (count(?a) AS ?triples) where { ?country <http://en.wikipedia.org/prime_minister> ?a }"
 
 # All countries
-q_b = "select ?country where { ?country <http://en.wikipedia.org/area> ?b }"
+q_b = "select (count(?country) AS ?triples) where { ?country <http://en.wikipedia.org/area> ?b }"
 #TODO: this should maybe be changed
 
 # All countries that are republics
-q_c = "select ?country where { ?country <http://en.wikipedia.org/government> ?b." \
+q_c = "select (count(?country) AS ?triples) where { ?country <http://en.wikipedia.org/government> ?b." \
       "FILTER (contains(str(?b), \"republic\")) }"
 
 # All countries that are monarchies
-q_d = "select ?country where { ?country <http://en.wikipedia.org/government> ?b." \
+q_d = "select (count(?country) AS ?triples) where { ?country <http://en.wikipedia.org/government> ?b." \
       "FILTER (contains(str(?b), \"monarchy\")) }"
 
 graph = rdflib.Graph()
