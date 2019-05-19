@@ -31,48 +31,85 @@ WHEN_PRES = 8
 WHEN_PM = 9
 INVALID = -1
 
+def extract_from_query_result(query_result_row):
+    query_result_row_str = str(query_result_row)
+    query_result_row_str = query_result_row_str.split('/')
+    query_result_row_str[3] = query_result_row_str[3].split('\'')
+    str_query = query_result_row_str[3][0]
+    str_query = str_query.replace("_"," ")
+    return str_query
+
+
+def reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2):
+    reply_str = ""
+    if query.pattern is WHO:
+        if num_results_1 == 0:
+            reply_str += "Prime minister of "
+            for query_result_row in query_results_2:
+                curr_reply_str = extract_from_query_result(query_result_row)
+                reply_str += curr_reply_str
+                reply_str += ", "
+        elif num_results_2 == 0:
+            reply_str += "President of "
+    if query.pattern is not WHO or num_results_2 == 0:
+        for query_result_row in query_results_1:
+            curr_reply_str = extract_from_query_result(query_result_row)
+            reply_str += curr_reply_str
+            reply_str += ", "
+    reply_str = reply_str[:-2]
+    if query.pattern is WHAT_AREA:
+        reply_str += " km2"
+    print(reply_str)
+    return reply_str
+
 
 def run_sparql_query(graph, sparql_query):
+    cnt = 0
     graph.parse("ontology.nt", format="nt")
-    x1 = graph.query(query)
-    print ('results:')
+    x1 = graph.query(sparql_query)
+    #print ('results:')
+    for row in x1:
+        #print(row)
+        cnt += 1
+    return [x1, cnt]
 
 
 def create_sparql_query(query):
-    entity = query.entity.lower()
+    entity = query.entity
     relation = query.relation
-    entity = entity.lower()
+    #entity = entity.lower()
     entity_lst = entity.split()
     entity_for_query = "_"
     entity_for_query = entity_for_query.join(entity_lst)
-    print("entity_for_query: " + entity_for_query)
+    #print("entity_for_query: " + entity_for_query)
     relation_lst = relation.split()
     relation_for_query = "_"
     relation_for_query = relation_for_query.join(relation_lst)
-    print("relation_for_query: " + relation_for_query)
+    #print("relation_for_query: " + relation_for_query)
     if query.pattern is WHO:
-        sparql_query = ' '
-        #TODO: TBD
+        sparql_query_pres = 'select ?a where { ?a <http://en.wikipedia.org/president> <' + ONTOLOGY_PREFIX + entity_for_query + '> }'
+        sparql_query_pm = 'select ?a where { ?a <http://en.wikipedia.org/prime_minister> <' + ONTOLOGY_PREFIX + entity_for_query + '> }'
+        return [sparql_query_pres, sparql_query_pm]
     elif query.pattern is WHO_PRES:
-        sparql_query = 'select DISTINCT ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/president> ?a }'
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/president> ?a }'
     elif query.pattern is WHO_PM:
-        sparql_query = 'select DISTINCT ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/prime_minister> ?a  }'
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/prime_minister> ?a  }'
     elif query.pattern is WHAT_POP:
-        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/population> ?a }'
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/population> ?a }'
     elif query.pattern is WHAT_CAP:
-        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/capital> ?a }'
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/capital> ?a }'
     elif query.pattern is WHAT_AREA:
-        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/area> ?a }'
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/area> ?a }'
     elif query.pattern is WHAT_GOV:
-        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/government> ?a }'
+        sparql_query = 'select ?a where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/government> ?a }'
     elif query.pattern is WHEN_PRES:
-        sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/president> ?a.' \
-                        ' ?a <http://example.org/birthDate> ?b}'
+        sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/president> ?a.' \
+                        ' ?a <http://en.wikipedia.org/birthDate> ?b}'
     elif query.pattern is WHEN_PM:
-        sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity + '> <http://example.org/prime_minister> ?a.' \
-                        ' ?a <http://example.org/birthDate> ?b}'
+        sparql_query = 'select ?b where { <' + ONTOLOGY_PREFIX + entity_for_query + '> <http://en.wikipedia.org/prime_minister> ?a.' \
+                        ' ?a <http://en.wikipedia.org/birthDate> ?b}'
 
-    return sparql_query
+    return [sparql_query, sparql_query]
 
 
 
@@ -124,14 +161,14 @@ class Query():
 
         # Get the relation and entity from the query
         if self.pattern is WHO:
-            print("pattern is: " + str(self.pattern))
+            #print("pattern is: " + str(self.pattern))
             self.entity = match.group(ENTITY_GROUP)
-            print(self.entity)
+            #print(self.entity)
             self.relation = NO_RELATION
         elif self.pattern is not INVALID:
-            print("pattern is: " + str(self.pattern))
+            #print("pattern is: " + str(self.pattern))
             self.entity = match.group(ENTITY_GROUP)
-            print("entity: " + self.entity)
+            #print("entity: " + self.entity)
             '''
             self.relation = match.group(RELATION_GROUP)
             rel = self.relation
@@ -167,6 +204,8 @@ def normalize_query(query):
 
 
 def __main__(query_str):
+    #TODO: verify number of arguments
+    #TODO: merge files
     query_str = normalize_query(query_str)
     reg_expressions = compile_reg_expressions([WHO_P, WHO_PRS_P, WHO_PM_P, \
                                                WHAT_POP_P, WHAT_CAP_P, WHAT_AR_P, WHAT_GOV_P, \
@@ -186,9 +225,14 @@ def __main__(query_str):
         print("When was the president/prime minister of <country> born?")
         print("Who is <entity>?")
         return None
-    #graph = rdflib.Graph()
-    sparql_query = create_sparql_query(query)
-    #run_sparql_query(graph, sparql_query)
+    graph = rdflib.Graph()
+    [sparql_1, sparql_2] = create_sparql_query(query)
+    [query_results_1, num_results_1] = run_sparql_query(graph, sparql_1)
+    if query.pattern is WHO:
+        [query_results_2, num_results_2] = run_sparql_query(graph, sparql_2)
+
+
+    return reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2)
 
 
 query_str = " ".join(sys.argv[1:])
