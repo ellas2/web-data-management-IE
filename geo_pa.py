@@ -16,7 +16,6 @@ WHEN_PRS_P = "^when was the president of (?P<entity>[\w -.]+) born\?*$"
 WHEN_PM_P = "^when was the prime minister of (?P<entity>[\w -.]+) born\?*$"
 
 ENTITY_GROUP = "entity"
-#RELATION_GROUP = "relation"
 NO_RELATION = "no_relation"
 
 # Pattern values for the queries
@@ -77,15 +76,9 @@ def run_sparql_query(graph, sparql_query):
 def create_sparql_query(query):
     entity = query.entity
     relation = query.relation
-    #entity = entity.lower()
     entity_lst = entity.split()
     entity_for_query = "_"
     entity_for_query = entity_for_query.join(entity_lst)
-    #print("entity_for_query: " + entity_for_query)
-    relation_lst = relation.split()
-    relation_for_query = "_"
-    relation_for_query = relation_for_query.join(relation_lst)
-    #print("relation_for_query: " + relation_for_query)
     if query.pattern is WHO:
         sparql_query_pres = 'select ?a where { ?a <http://en.wikipedia.org/president> <' + ONTOLOGY_PREFIX + entity_for_query + '> }'
         sparql_query_pm = 'select ?a where { ?a <http://en.wikipedia.org/prime_minister> <' + ONTOLOGY_PREFIX + entity_for_query + '> }'
@@ -161,27 +154,11 @@ class Query():
 
         # Get the relation and entity from the query
         if self.pattern is WHO:
-            #print("pattern is: " + str(self.pattern))
             self.entity = match.group(ENTITY_GROUP)
-            #print(self.entity)
             self.relation = NO_RELATION
         elif self.pattern is not INVALID:
-            #print("pattern is: " + str(self.pattern))
             self.entity = match.group(ENTITY_GROUP)
-            #print("entity: " + self.entity)
-            '''
-            self.relation = match.group(RELATION_GROUP)
-            rel = self.relation
-            rel = normalize_query(rel)
-            print("relation: " + self.relation)
-            if self.pattern is WHEN or self.pattern is WHO:
-                if rel != "president" and rel != "prime minister":
-                    print("I am here")
-                    self.pattern = INVALID
-            elif self.pattern is WHAT:
-                if rel != "area" and rel != "government" and rel != "capital":
-                    self.pattern = INVALID
-            '''
+
 
 
 def compile_reg_expressions(patterns):
@@ -204,7 +181,6 @@ def normalize_query(query):
 
 
 def __main__(query_str):
-    #TODO: verify number of arguments
     #TODO: merge files
     query_str = normalize_query(query_str)
     reg_expressions = compile_reg_expressions([WHO_P, WHO_PRS_P, WHO_PM_P, \
@@ -230,9 +206,8 @@ def __main__(query_str):
     [query_results_1, num_results_1] = run_sparql_query(graph, sparql_1)
     if query.pattern is WHO:
         [query_results_2, num_results_2] = run_sparql_query(graph, sparql_2)
-
-
-    return reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2)
+        return reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2)
+    return reply_to_user(query, query_results_1, num_results_1, None, 0)
 
 
 query_str = " ".join(sys.argv[1:])

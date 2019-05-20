@@ -12,7 +12,7 @@ def run_query(graph, query, query_num):
 q_a = "select (count(?a) AS ?triples) where { ?country <http://en.wikipedia.org/prime_minister> ?a }"
 
 # All countries
-q_b = "select (count(?country) AS ?triples) where { ?country <http://en.wikipedia.org/area> ?b }"
+q_b = "select (count(?country) AS ?triples) where { ?country <http://en.wikipedia.org/country> ?country }"
 #TODO: this should maybe be changed
 
 # All countries that are republics
