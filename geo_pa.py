@@ -1,3 +1,7 @@
+import requests
+import lxml.html
+from multiprocessing.dummy import Pool as ThreadPool
+import threading
 import re
 import sys
 import rdflib
@@ -30,12 +34,117 @@ WHEN_PRES = 8
 WHEN_PM = 9
 INVALID = -1
 
-def extract_from_query_result(query_result_row):
+
+
+lock = '' # Define lock for sync
+wiki_prefix = "http://en.wikipedia.org"
+g = '' # main ontology graph
+president = rdflib.URIRef(wiki_prefix + '/president')
+prime_minister = rdflib.URIRef(wiki_prefix + '/prime_minister')
+population = rdflib.URIRef(wiki_prefix + '/population')
+area = rdflib.URIRef(wiki_prefix + '/area')
+government = rdflib.URIRef(wiki_prefix + '/government')
+capital = rdflib.URIRef(wiki_prefix + '/capital')
+birth_date = rdflib.URIRef(wiki_prefix + '/birthDate')
+country_entity = rdflib.URIRef(wiki_prefix + '/country')
+
+
+def add_birth_date_information(graph, person, relation, url, xpath_query):
+    new_res = requests.get(url)
+    page = lxml.html.fromstring(new_res.content)
+    info_bday_q = page.xpath(xpath_query)
+    if len(info_bday_q) > 0:
+        info_bday = info_bday_q[0].lstrip(' ').rstrip(' ').replace(' ', '_')
+        info_bday = rdflib.Literal(info_bday, datatype=rdflib.XSD.date)
+        with lock:
+            graph.add((person, relation, rdflib.URIRef(wiki_prefix + "/" + info_bday)))
+
+def add_country_info_to_ontology(graph, country, relation, page, xpath_query):
+    info_country_q = page.xpath(xpath_query)
+    if len(info_country_q) > 0:
+        if relation == government:
+            all_govern = set()
+            for result in info_country_q:
+                if len(result) > 2 and not re.match(r'\[\d+\]', result):
+                    all_govern.add(result)
+            info_country = ','.join(all_govern).lstrip(' ').rstrip(' ').replace(' ', '_')
+        else:
+            info_country = info_country_q[0].lstrip(' ').rstrip(' ').replace(' ', '_')
+        if relation == area or relation == population:
+            info_country = re.search(r'[\d,]+', info_country)
+            if info_country:
+                info_country = info_country.group(0)
+            else:
+                return None
+        entity_to_write = rdflib.URIRef(wiki_prefix + "/" + info_country)
+        with lock:
+            graph.add((country, relation, entity_to_write))
+        return entity_to_write
+    else:
+        return None
+
+
+def extract_country_info(objects):
+    graph = objects[0]
+    country_element = objects[1]
+    country_url = country_element.xpath("@href") # Extract team url
+    country_name_q = country_element.xpath("text()") # Extract team name
+    if len(country_url) > 0 and len(country_name_q) > 0:
+        new_url = wiki_prefix + country_url[0]
+        country_name = country_name_q[0].lstrip(' ').rstrip(' ').replace(' ', '_')
+        new_res = requests.get(new_url)
+        country_page = lxml.html.fromstring(new_res.content)
+        curr_country = rdflib.URIRef(wiki_prefix + "/" + country_name)
+        with lock:
+            graph.add((curr_country, country_entity, curr_country))
+        add_country_info_to_ontology(graph, curr_country, capital, country_page,
+                                     "//table[contains(@class, 'infobox')]//tr[contains(th//text(),'Capital')]/td/a/text()")
+        add_country_info_to_ontology(graph, curr_country, area, country_page,
+                                     "//table[contains(@class, 'infobox')]//tr[contains(th//text(),'Area')]/following-sibling::tr[1]/td/text()[1]")
+        add_country_info_to_ontology(graph, curr_country, population, country_page,
+                                     "//table[contains(@class, 'infobox')]//tr[contains(th//text(),'Population')]/following-sibling::tr[1]/td/text()[1]")
+        add_country_info_to_ontology(graph, curr_country, government, country_page,
+                                     "//table[contains(@class, 'infobox')]//tr[contains(th//text(),'Government')]/td//text()")
+        president_entity = add_country_info_to_ontology(graph, curr_country, president, country_page,
+                                     "//table[contains(@class, 'infobox')]//tr[th//a/text() ='President']/td//a/@title")
+        prime_minister_entity = add_country_info_to_ontology(graph, curr_country, prime_minister, country_page,
+                                     "//table[contains(@class, 'infobox')]//tr[th//a/text() ='Prime Minister']/td//a/@title")
+
+        country_president_url_q = country_page.xpath("//table[contains(@class, 'infobox')]//tr[th//a/text() ='President']/td//a/@href")
+        if len(country_president_url_q) > 0 and president_entity:
+            add_birth_date_information(graph, president_entity, birth_date, wiki_prefix + country_president_url_q[0],
+                                     "//span[contains(@class,'bday')]/text()")
+
+        country_prime_minister_url_q = country_page.xpath("//table[contains(@class, 'infobox')]//tr[th//a/text() ='Prime Minister']/td//a/@href")
+        if len(country_prime_minister_url_q) > 0 and prime_minister_entity:
+            add_birth_date_information(graph, prime_minister_entity, birth_date, wiki_prefix + country_prime_minister_url_q[0],
+                                     "//span[contains(@class,'bday')]/text()")
+
+
+# Extract all data about the countries
+def extract_countries(countries_url, graph, ontology_file_name):
+    res = requests.get(countries_url)
+    doc = lxml.html.fromstring(res.content)
+    countries_q = doc.xpath("//table[contains(caption/text(), 'Countries')]//tr/td[2][contains(span/@class,'flagicon')]/a")
+    arr_for_multi = []
+    for line in countries_q: #Iterate through all teams
+        arr_for_multi.append((graph, line))
+    pool = ThreadPool(5)
+    results = pool.map(extract_country_info, arr_for_multi) # Use multi-thread to process all countries
+    pool.close()
+    pool.join() # Join all threads
+    graph.serialize(ontology_file_name, format="nt")
+
+
+
+def extract_from_query_result(query_result_row, query):
     query_result_row_str = str(query_result_row)
     query_result_row_str = query_result_row_str.split('/')
     query_result_row_str[3] = query_result_row_str[3].split('\'')
     str_query = query_result_row_str[3][0]
     str_query = str_query.replace("_"," ")
+    if query.pattern == WHAT_GOV:
+        str_query = str_query.replace(",", " ")
     return str_query
 
 
@@ -45,14 +154,14 @@ def reply_to_user(query, query_results_1, num_results_1, query_results_2, num_re
         if num_results_1 == 0:
             reply_str += "Prime minister of "
             for query_result_row in query_results_2:
-                curr_reply_str = extract_from_query_result(query_result_row)
+                curr_reply_str = extract_from_query_result(query_result_row, query)
                 reply_str += curr_reply_str
                 reply_str += ", "
         elif num_results_2 == 0:
             reply_str += "President of "
     if query.pattern is not WHO or num_results_2 == 0:
         for query_result_row in query_results_1:
-            curr_reply_str = extract_from_query_result(query_result_row)
+            curr_reply_str = extract_from_query_result(query_result_row, query)
             reply_str += curr_reply_str
             reply_str += ", "
     reply_str = reply_str[:-2]
@@ -180,18 +289,17 @@ def normalize_query(query):
     return query
 
 
-def __main__(query_str):
-    #TODO: merge files
+def answer_question(query_str):
     query_str = normalize_query(query_str)
     reg_expressions = compile_reg_expressions([WHO_P, WHO_PRS_P, WHO_PM_P, \
                                                WHAT_POP_P, WHAT_CAP_P, WHAT_AR_P, WHAT_GOV_P, \
                                                WHEN_PRS_P, WHEN_PM_P])
 
-    [who_reg, who_president_reg, who_prime_min_reg, what_pop_reg, what_cap_reg,\
+    [who_reg, who_president_reg, who_prime_min_reg, what_pop_reg, what_cap_reg, \
      what_area_reg, what_gov_reg, when_president_reg, when_prime_min_reg] = reg_expressions
 
-    query = Query(query_str, who_reg, who_president_reg, who_prime_min_reg, what_pop_reg, what_cap_reg,\
-     what_area_reg, what_gov_reg, when_president_reg, when_prime_min_reg)
+    query = Query(query_str, who_reg, who_president_reg, who_prime_min_reg, what_pop_reg, what_cap_reg, \
+                  what_area_reg, what_gov_reg, when_president_reg, when_prime_min_reg)
     if query.pattern is INVALID:
         print("Unable to handle query: " + query_str)
         print("Can only handle queries of the form:")
@@ -209,6 +317,23 @@ def __main__(query_str):
         return reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2)
     return reply_to_user(query, query_results_1, num_results_1, None, 0)
 
+def create_ontology(ontology_file_name):
+    url = 'https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)'
+    extract_countries(url, g, ontology_file_name)
 
-query_str = " ".join(sys.argv[1:])
-__main__(query_str)
+if __name__ == "__main__":
+    args = sys.argv
+    if len(args) < 3:
+        print("Invalid number of arguments\n")
+    elif args[1] == 'create':
+        if len(args) > 3:
+            print("Invalid number of arguments\n")
+        else:
+            g = rdflib.Graph()
+            lock = threading.Lock()
+            create_ontology(args[2])
+    elif args[1] == 'question':
+        answer_question(' '.join(args[2:]))
+    else:
+        print("Invalid number of arguments\n")
+
