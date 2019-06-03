@@ -168,8 +168,6 @@ def reply_to_user(query, query_results_1, num_results_1, query_results_2, num_re
     if query.pattern is WHAT_AREA:
         reply_str += " km2"
     print(reply_str)
-    return reply_str
-
 
 def run_sparql_query(graph, sparql_query):
     cnt = 0
@@ -314,15 +312,19 @@ def answer_question(query_str):
     [query_results_1, num_results_1] = run_sparql_query(graph, sparql_1)
     if query.pattern is WHO:
         [query_results_2, num_results_2] = run_sparql_query(graph, sparql_2)
-        return reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2)
-    return reply_to_user(query, query_results_1, num_results_1, None, 0)
+        reply_to_user(query, query_results_1, num_results_1, query_results_2, num_results_2)
+    else:
+        reply_to_user(query, query_results_1, num_results_1, None, 0)
 
 def create_ontology(ontology_file_name):
     url = 'https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)'
     extract_countries(url, g, ontology_file_name)
 
-if __name__ == "__main__":
-    args = sys.argv
+
+
+def main(args):
+    global lock
+    global g
     if len(args) < 3:
         print("Invalid number of arguments\n")
     elif args[1] == 'create':
@@ -336,4 +338,9 @@ if __name__ == "__main__":
         answer_question(' '.join(args[2:]))
     else:
         print("Invalid number of arguments\n")
+
+
+if __name__ == "__main__":
+    args = sys.argv
+    main(args)
 
