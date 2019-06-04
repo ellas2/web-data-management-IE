@@ -63,10 +63,10 @@ def add_country_info_to_ontology(graph, country, relation, page, xpath_query):
     info_country_q = page.xpath(xpath_query)
     if len(info_country_q) > 0:
         if relation == government:
-            all_govern = set()
+            all_govern = []
             for result in info_country_q:
                 if len(result) > 2 and not re.match(r'\[\d+\]', result):
-                    all_govern.add(result)
+                    all_govern.append(result)
             info_country = ','.join(all_govern).lstrip(' ').rstrip(' ').replace(' ', '_')
         else:
             info_country = info_country_q[0].lstrip(' ').rstrip(' ').replace(' ', '_')
